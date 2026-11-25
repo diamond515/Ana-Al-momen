@@ -19,12 +19,15 @@ jobs:
           if [ -f ana-almumin.zip ]; then unzip -q -o ana-almumin.zip -d unpacked; fi
           f=$(find . -name settings.gradle.kts | head -1)
           if [ -z "$f" ]; then
-            echo "settings.gradle.kts not found"
+            echo "::error::settings.gradle.kts not found"
             ls -R | head -60
             exit 1
           fi
           cd "$(dirname "$f")"
-          gradle assembleDebug --stacktrace
+          gradle assembleDebug --stacktrace 2>&1 | tee /tmp/build.log
+          status=${PIPESTATUS[0]}
+          grep -E '^e: ' /tmp/build.log | sed -E 's#file:///home/runner/work/[^/]+/[^/]+/##' | while read -r line; do echo "::error::$line"; done
+          exit $status
       - uses: actions/upload-artifact@v4
         with:
           name: ana-almumin-debug-apk
