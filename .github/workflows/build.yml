@@ -23,7 +23,21 @@ jobs:
             ls -R | head -60
             exit 1
           fi
-          cd "$(dirname "$f")"
+          ROOT="$PWD"
+          PROJ="$(cd "$(dirname "$f")" && pwd)"
+          mkdir -p "$PROJ/app/src/main/assets/img"
+          echo "== images found =="
+          find "$ROOT" \( -path "$ROOT/.git" -o -path "$ROOT/unpacked" -o -path "*/build" \) -prune -o -type f \
+            \( -iname 'bg_*.jpg' -o -iname 'bg_*.jpeg' -o -iname 'bg_*.png' -o -iname 'bg_*.webp' \
+               -o -iname 'reader_*.jpg' -o -iname 'reader_*.jpeg' -o -iname 'reader_*.png' -o -iname 'reader_*.webp' \) -print0 |
+          while IFS= read -r -d '' img; do
+            echo "$img"
+            cp -f "$img" "$PROJ/app/src/main/assets/img/" 2>/dev/null || true
+          done
+          m=$(find "$ROOT" \( -path "$ROOT/.git" -o -path "$ROOT/unpacked" -o -path "*/build" \) -prune -o -type f -iname 'mushaf.pdf' -print | head -1)
+          if [ -n "$m" ]; then echo "mushaf: $m"; cp -f "$m" "$PROJ/app/src/main/assets/mushaf.pdf"; fi
+          ls -la "$PROJ/app/src/main/assets/img" || true
+          cd "$PROJ"
           gradle assembleDebug --stacktrace 2>&1 | tee /tmp/build.log
           status=${PIPESTATUS[0]}
           grep -E '^e: ' /tmp/build.log | sed -E 's#file:///home/runner/work/[^/]+/[^/]+/##' | while read -r line; do echo "::error::$line"; done
